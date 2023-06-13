@@ -1,0 +1,210 @@
+#!/bin/bash
+
+printf "Début du script\n\n"
+
+# on assigne le 1er argument passée au script à la variable BIN_NAME
+# BIN_NAME représente le nom du projet
+BIN_NAME=$1
+
+# fonction pour générer des logs contenant le message et la date et l'heure de l'emission du log
+log() {
+  local message=$1
+  local timestamp=$(date +"%d-%m-%Y à %H:%M:%S")
+  echo "$message, le $timestamp"
+}
+
+# fonction pour vérifier l'espace disponible
+check_disk_space() {
+  local required_space=$1
+  local available_space=$(df -Pk . | awk 'NR==2{print $4}')  # espace disponible en kilo-octets
+
+  if [ "$available_space" -lt "$required_space" ]; then
+    log "Erreur : Espace insuffisant."
+    exit 1
+  fi
+}
+
+# vérification de l'espace disponible avant de créer les dossiers
+check_disk_space 1000
+
+# vérification de l'existance des dossiers
+# les crées s'ils n'existent pas
+if [ ! -d "inc" ]; then
+  mkdir inc
+  log "Dossier Include : Crée avec succès"
+fi
+
+if [ ! -d "src" ]; then
+  mkdir src
+  log "Dossier Sources : Crée avec succès"
+fi
+
+# vérification de l'existance des fichiers
+# les crées s'ils n'existent pas
+if [ ! -f "Makefile" ]; then
+  touch Makefile
+  log "Fichier Makefile : Crée avec succès"
+fi
+
+if [ ! -f ".gitignore" ]; then
+  touch .gitignore
+  log "Fichier gitignore : Crée avec succès"
+fi
+
+if [ ! -f "inc/$BIN_NAME.h" ]; then # création d'un fichier .h qui porte le nom de projet dans le dossier include
+  touch "inc/$BIN_NAME.h"
+  log "Fichier inc/$BIN_NAME.h : Crée avec succès"
+fi
+
+if [ ! -f "src/$BIN_NAME.c" ]; then # création d'un fichier .c qui porte le nom de projet dans le dossier sources
+  touch "src/$BIN_NAME.c"
+  log "Fichier src/$BIN_NAME.c : Crée avec succès"
+fi
+
+if [ ! -f "main.c" ]; then
+  touch main.c
+  log "Fichier main.c : Crée avec succès"
+fi
+printf "\n"
+
+#! Gestion du fichier gitignore
+# on utilise echo pour écrire le cotenu voulu
+# et on utilise ">>" pour rediriger le cotenu dans le fichier
+
+# vérification du contenu du fichier
+file_contents=$(cat .gitignore)
+log "Vérification du contenu du fichier gitignore"
+
+# si le fichier est vide on ajoute le contenu souhaité
+if [ -z "$file_contents" ]; then
+  echo "*.a
+*.o
+*.out
+*.gc*
+vgcore*
+.vscode
+$BIN_NAME" >> .gitignore
+log "Ajout du contenu dans le fichier gitignore"
+
+# sinon, on n'ajoute rien
+else
+  log "Le fichier gitignore contient du contenu"
+fi
+printf "\n"
+#! Fin gestion du fichier gitignore
+
+#! Gestion du fichier BIN_NAME.h
+# on nomme le fichier dans le include après BIN_NAME
+
+# vérification du contenu du fichier
+file_contents=$(cat "inc/$BIN_NAME.h")
+log "Vérification du contenu du fichier inc/$BIN_NAME.h"
+
+# si le fichier est vide on ajoute le contenu souhaité
+if [ -z "$file_contents" ]; then
+  echo "#ifndef ${BIN_NAME^^}_H_
+#define ${BIN_NAME^^}_H_
+
+int $BIN_NAME(void);
+
+#endif" >> inc/$BIN_NAME.h
+log "Ajout du contenu dans le fichier inc/$BIN_NAME.h"
+
+# sinon, on n'ajoute rien
+else
+  log "Le fichier inc/$BIN_NAME.h contient du contenu"
+fi
+printf "\n"
+#! Fin gestion du fichier BIN_NAME.h
+
+#! Gestion du fichier main.c
+# vérification du contenu du fichier
+file_contents=$(cat "main.c")
+log "Vérification du contenu du fichier main.c"
+
+# si le fichier est vide on ajoute le contenu souhaité
+if [ -z "$file_contents" ]; then
+  echo "#include \"inc/$BIN_NAME.h\"
+
+int main(void)
+{
+    return 0;
+}" >> main.c
+log "Ajout du contenu dans le fichier main.c"
+
+# sinon, on n'ajoute rien
+else
+  log "Le fichier main.c contient du contenu"
+fi
+printf "\n"
+#! Fin gestion du fichier main.c
+
+#! Gestion du fichier BIN_NAME.c
+# vérification du contenu du fichier
+file_contents=$(cat "src/$BIN_NAME.c")
+log "Vérification du contenu du fichier src/$BIN_NAME.c"
+
+# si le fichier est vide on ajoute le contenu souhaité
+if [ -z "$file_contents" ]; then
+  echo "#include \"../inc/$BIN_NAME.h\"
+
+int $BIN_NAME(void)
+{
+    return 0;
+}" >> src/$BIN_NAME.c
+log "Ajout du contenu dans le fichier src/$BIN_NAME.c"
+# sinon, on n'ajoute rien
+else
+  log "Le fichier src/$BIN_NAME.c contient du contenu"
+fi
+printf "\n"
+#! Fin gestion du fichier BIN_NAME.c
+
+#! Gestion du fichier Makefile
+# vérification du contenu du fichier
+file_contents=$(cat Makefile)
+log "Vérification du contenu du fichier Makefile"
+
+# si le fichier est vide on ajoute le contenu souhaité
+if [ -z "$file_contents" ]; then
+  echo "##
+## PROJECT, 2023
+## File description:
+## Makefile
+##
+
+CC	=	gcc
+
+CFLAGS	=	-o \$(NAME) -g3 -Wall -Wextra
+
+SRC	=	\$(wildcard *.c src/*.c)
+
+OBJ	=	\$(patsubst %.c, %.o, \$(SRC))
+
+NAME	=	$BIN_NAME
+
+all:
+	make \$(NAME)
+
+\$(NAME):	\$(OBJ)
+	\$(CC) \$(OBJ) \$(CFLAGS)
+	make clean
+
+clean:
+	rm -rf \$(OBJ)
+
+fclean:	clean
+	rm -rf \$(NAME)
+
+re:	fclean	all" >> Makefile
+log "Ajout du contenu dans le fichier Makefile"
+
+# sinon, on n'ajoute rien
+else
+  log "Le fichier Makefile contient du contenu"
+fi
+#! Fin gestion du fichier Makefile
+
+printf "\nFin du script\n"
+
+#! Fin du script
