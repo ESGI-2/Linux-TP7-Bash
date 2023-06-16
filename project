@@ -13,20 +13,6 @@ log() {
   echo "$message, le $timestamp"
 }
 
-# fonction pour vérifier l'espace disponible
-check_disk_space() {
-  local required_space=$1
-  local available_space=$(df -Pk . | awk 'NR==2{print $4}')  # espace disponible en kilo-octets
-
-  if [ "$available_space" -lt "$required_space" ]; then
-    log "Erreur : Espace insuffisant."
-    exit 1
-  fi
-}
-
-# vérification de l'espace disponible avant de créer les dossiers
-check_disk_space 1000
-
 # vérification de l'existance des dossiers
 # les crées s'ils n'existent pas
 if [ ! -d "inc" ]; then
